@@ -1,0 +1,234 @@
+---
+title: "Visualization Exercises"
+author: "Ethan Marcano"
+date: '2022-03-21'
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include=FALSE}
+library(formatR)
+library(tidyverse)
+library(igraph)
+library(maps)
+library(ggmap)
+library(wesanderson)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60), tidy=TRUE, echo = TRUE)
+```
+# Visualization Exercises
+
+## Question 1: Visualization Attributes of Parole Violators
+
+### Part A)
+
+```{r parole_read, message=FALSE}
+Parole <- read_csv("Parole.csv")
+```
+
+```{r parole_plot}
+ggplot(data = Parole, aes(x = Age)) + 
+  geom_histogram(binwidth = 5, color = "blue")
+```
+
+i)
++ The age bracket with the most parolees is the 25-30 age bracket. The one with the least parolees is the 65-69 age bracket.
+ii)
++ It creates a blue outline for each bracket, enabling the user to see the data more clearly.
+
+### Part B)
+
+```{r parole_gender}
+ggplot(data = Parole, aes(x = Age)) + geom_histogram(binwidth = 5) + facet_grid(Male ~ .)
+```
+
+i)
++ The majority of prisoners in all age brackets are male. However the male prisoners are on the younger side, while the female prisoners trend towards middle age.
+
+```{r parole_gender_flipped}
+ggplot(data = Parole, aes(x = Age)) + 
+  geom_histogram(binwidth = 5) + facet_grid(. ~ Male)
+```
+
+ii)
++ It flips the axis for the graph.
+
+```{r parole_fill}
+ggplot(data = Parole, aes(x = Age, fill = Male)) + 
+  geom_histogram(binwidth = 5, position = "identity", alpha = 0.5)
+```
+
+iii)
++ The faceting histograms look better in delineating between different data groups, and enables easy comparison.
+
+### Part C)
+
+```{r parole_month}
+ggplot(data = Parole, aes(x = TimeServed)) + 
+  geom_histogram(binwidth = (1), color = "red")
+```
+
+i)
++ The most common length of time served is 5 years.
+
+```{r parole_month_decimal}
+ggplot(data = Parole, aes(x = TimeServed)) + 
+  geom_histogram(binwidth = 0.1, color = "red")
+```
+
+ii)
++ The most common length of time served is 3 years. It may be necessary to make visualizations more precise as to avoid interpretation errors.
+
+```{r parole_facet_crime}
+ggplot(data = Parole, aes(x = TimeServed)) +
+  geom_histogram(binwidth = 1, color = "red") +
+  facet_grid(. ~ Crime)
+```
+
+iii)
++ Out of the named crimes, a drug arrest suggests a longer time served. Other crimes (may referring to more severe misdemeanors or felonies) also tend to carry a harder penalty.
+
+```{r parole_fill_crime}
+ggplot(data = Parole, aes(x = TimeServed, fill = Crime)) +
+  geom_histogram(binwidth = 1, position = "identity", alpha = 0.5)
+```
++ The faceting histogram enables you to look at all types of data, and I prefer for much of the same reasons as the gender histograms.
+
+## Question 2: Visualizing Network Data
+
+### Part A)
+
+```{r users_ read, message=FALSE}
+users <- read_csv("Users.csv")
+edges <- read_csv("Edges.csv")
+```
+
+```{r users_count}
+nrow(users)
+```
+i) 
++ There are 59 users in our dataset.
+
+```{r users_average}
+nrow(edges)/nrow(users)
+```
+ii)
++ There is an average of about 2.5 friends between users in the network.
+
+```{r users_locale}
+locale_count <- users %>%
+  count(Locale)
+locale_count
+```
+iii)
++ Locale B is the most common, outnumbering A by 44 users.
+
+```{r users_all_gender_school}
+gender_school <- users %>%
+  count(School, Gender)
+gender_school
+```
+
+iv)
++ Neither school is an all-girls or all-boys school.
+
+### Part B)
+
+```{r users_igraph}
+g <- graph.data.frame(edges, FALSE, users)
+plot(g, vertex.size = 5, vertex.label = NA)
+```
+
+i)
++ There are three connected components outside the main group.
+ii)
++ There are seven users with no friends.
+
+```{r users_degrees}
+degree(g)
+```
+
+iii)
++ There are nine users with 10 or more friends.
+
+### Part C)
+```{r users_gender_colors}
+V(g)$color[V(g)$Gender == "A"] = "red"
+V(g)$color[V(g)$Gender == "B"] = "blue"
+
+plot(g, vertex.size = 5, vertex.label = NA)
+```
+
+i)
++ It seems that users of Gender B tend to have a high number of friends and make up a vast majority of connections.
+
+```{r users_locale_colors}
+V(g)$color[V(g)$School == "A"] = "red"
+V(g)$color[V(g)$School == "B"] = "blue"
+V(g)$color[V(g)$School == "AB"] = "yellow"
+
+plot(g, vertex.size = 5, vertex.label = NA)
+```
+
+ii)
++ Yes, those users are both friends with each other.
+
+## Question 3: Election Forecasting
+
+### Part A)
+
+```{r polling_read}
+polling <- read_csv("Polling.csv")
+```
+
+```{r polling_map_colors}
+pal <- wes_palette("Zissou1", 100, type = "continuous")
+```
+
+```{r polling_map_plot_setup}
+statesMap <- map_data("state")
+electionMap <- merge(statesMap, polling, by.x = "region", by.y = "State")
+electionMap <- electionMap[order(electionMap$order),]
+```
+
+```{r polling_map_plot}
+ggplot(electionMap, aes(x = long, y = lat, group = group, fill = DiffCount)) +
+  geom_polygon(color="black")
+```
+
+```{r polling_map_scale}
+ggplot(electionMap, aes(x = long, y = lat, group = group, fill = DiffCount)) +
+  geom_polygon(color="black") + scale_fill_gradientn(colours = pal)
+```
+
++ Missouri, Montana, and Florida stick out as consistent polling states. Ohio is a notable outlier.
+
+### Part B)
+
+```{r polling_map_surveyUSA}
+ggplot(electionMap, aes(x = long, y = lat, group = group, fill = SurveyUSA)) +
+  geom_polygon(color="black") + 
+  scale_fill_gradient(low = "blue", high = "red")
+```
+
+```{r polling_map_rasmussen}
+ggplot(electionMap, aes(x = long, y = lat, group = group, fill = Rasmussen)) +
+  geom_polygon(color="black") + 
+  scale_fill_gradient(low = "blue", high = "red")
+```
+
+i)
++ The most notable thing that while both groups share some common states between them, SurveyUSA focuses on primarily on the Mid-Atlantic region while Rasmussen covers the Midwest. Rasmussen also trends centrist, while SurveyUSA trends Republican. Compared to the DiffCount map, both groups predict a redder Midwest than DiffCount.
+
+ii)
++ All three maps predict a tight race, leaning Republican. For the 2012 election, none of these maps are correct.
+
+### Part C)
+```{r polling_map_republican}
+ggplot(electionMap, aes(x = long, y = lat, group = group, fill = Republican)) +
+  geom_polygon(color="black") + 
+  scale_fill_gradient(low = "blue", high = "red")
+```
+
+iii)
++ All of the maps got a purple Midwest relatively right, as well as a blue West Coast and Northeast.
++ If I were to create a predictive model, I would stick to aggregating different polling sources, particularly in swing state regions such as the Midwest and Mid-Atlantic.
